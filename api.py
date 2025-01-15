@@ -97,19 +97,53 @@ if uploaded_file:
                 # Select date range
                 start_date = st.date_input("Start Date", input_data['Date'].min())
                 end_date = st.date_input("End Date", input_data['Date'].max())
-                filtered_data = input_data[(input_data['Date'] >= pd.to_datetime(start_date)) & (input_data['Date'] <= pd.to_datetime(end_date))]
-                
-                historical_data = filtered_data[['Date', 'ESG_Score']]
-                combined_data = pd.concat([
-                    historical_data,
-                    pd.DataFrame({'Date': future_dates, 'ESG_Score': future_predictions})
-                ])
+                filtered_data = input_data[
+                    (input_data['Date'] >= pd.to_datetime(start_date)) & 
+                    (input_data['Date'] <= pd.to_datetime(end_date))
+                ]
 
-                plt.figure(figsize=(10, 6))
-                sns.lineplot(data=combined_data, x='Date', y='ESG_Score', marker='o')
-                plt.title("ESG Scores: Historical and Predicted")
-                plt.xticks(rotation=45)
-                st.pyplot()
+                # Chart type selection
+                chart_type = st.radio(
+                    "Select chart type",
+                    ("Line Chart", "3D Scatter Plot")
+                )
+
+                if chart_type == "Line Chart":
+                    historical_data = filtered_data[['Date', 'ESG_Score']]
+                    combined_data = pd.concat([
+                        historical_data,
+                        pd.DataFrame({'Date': future_dates, 'ESG_Score': future_predictions})
+                    ])
+
+                    plt.figure(figsize=(10, 6))
+                    sns.lineplot(data=combined_data, x='Date', y='ESG_Score', marker='o')
+                    plt.title("ESG Scores: Historical and Predicted")
+                    plt.xticks(rotation=45)
+                    st.pyplot()
+
+                elif chart_type == "3D Scatter Plot":
+                    from mpl_toolkits.mplot3d import Axes3D
+
+                    fig = plt.figure(figsize=(10, 8))
+                    ax = fig.add_subplot(111, projection='3d')
+
+                    # Plot using three features
+                    ax.scatter(
+                        filtered_data['Carbon_Emissions'],
+                        filtered_data['Governance_Score'],
+                        filtered_data['Social_Score'],
+                        c=filtered_data['Environmental_Score'],
+                        cmap='viridis',
+                        s=50
+                    )
+
+                    ax.set_xlabel("Carbon Emissions")
+                    ax.set_ylabel("Governance Score")
+                    ax.set_zlabel("Social Score")
+                    ax.set_title("3D Scatter Plot of Features")
+
+                    st.pyplot(fig)
+
 
             elif section == "Conclusions":
                 st.subheader("Conclusions")
