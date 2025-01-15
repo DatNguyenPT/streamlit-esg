@@ -5,7 +5,7 @@ import numpy as np
 from datetime import timedelta
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from mpl_toolkits.mplot3d import Axes3D
 
 # Load the saved model
 model = load("best_esg_prediction_model.pkl")
@@ -24,7 +24,7 @@ def generate_future_dates(last_date, num_days):
     future_dates = [last_date + timedelta(days=i) for i in range(1, num_days + 1)]
     return future_dates
 
-# Function to forecast the next 3 days based on the model and average data
+# Function to forecast the next n days based on the model and average data
 def forecast_next_days(model, avg_data, num_days=3):
     """Forecast the next specified number of days using the average data."""
     predictions = []
@@ -37,7 +37,6 @@ def forecast_next_days(model, avg_data, num_days=3):
         current_input[-1] = prediction
 
     return predictions
-
 
 # Streamlit app setup
 st.set_page_config(layout="wide")
@@ -54,29 +53,27 @@ uploaded_file = st.file_uploader("Upload your data file", type=["csv", "xlsx"])
 
 if uploaded_file:
     try:
-        # Load data
+        # Load and preprocess data
         input_data = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
         st.success("Data uploaded successfully.")
+        input_data['Date'] = pd.to_datetime(input_data['Date'])
+        input_data = input_data.sort_values('Date')
 
         # Required columns
-        required_columns = [
-            "Date", "Industry", "Carbon_Emissions", "Governance_Score",
-            "Social_Score", "Environmental_Score", "ESG_Score"
-        ]
+        required_columns = ["Date", "Industry", "Carbon_Emissions", "Governance_Score", 
+                            "Social_Score", "Environmental_Score", "ESG_Score"]
 
         if all(col in input_data.columns for col in required_columns):
-            input_data['Date'] = pd.to_datetime(input_data['Date'])
-            input_data = input_data.sort_values('Date')
             lag_days = 30
             input_data = create_lag_features(input_data, "ESG_Score", lag_days).dropna()
-            
             feature_columns = [col for col in input_data.columns if col not in ['Date', 'Industry', 'ESG_Score']]
-            input_data_features = input_data[feature_columns]
-            avg_values = input_data_features.mean()
-
+            avg_values = input_data[feature_columns].mean()
             avg_data = avg_values.values
-            future_predictions = forecast_next_days(model, avg_data, num_days=3)
-            future_dates = generate_future_dates(input_data['Date'].iloc[-1], 3)
+
+            # Calculate predictions globally
+            prediction_horizon = st.slider("Select prediction horizon (days)", 1, 30, 3)
+            future_predictions = forecast_next_days(model, avg_data, num_days=prediction_horizon)
+            future_dates = generate_future_dates(input_data['Date'].iloc[-1], prediction_horizon)
 
             prediction_df = pd.DataFrame({
                 'Date': future_dates,
@@ -88,7 +85,7 @@ if uploaded_file:
                 st.subheader("Average Values")
                 st.write(avg_values)
 
-                st.subheader("Predicted ESG Scores for Next 3 Days")
+                st.subheader("Predicted ESG Scores for Next Days")
                 st.write(prediction_df)
 
             elif section == "Visualization":
@@ -122,8 +119,6 @@ if uploaded_file:
                     st.pyplot()
 
                 elif chart_type == "3D Scatter Plot":
-                    from mpl_toolkits.mplot3d import Axes3D
-
                     fig = plt.figure(figsize=(10, 8))
                     ax = fig.add_subplot(111, projection='3d')
 
@@ -144,11 +139,10 @@ if uploaded_file:
 
                     st.pyplot(fig)
 
-
             elif section == "Conclusions":
                 st.subheader("Conclusions")
                 st.write(f"The average values of the features are as follows:\n{avg_values}")
-                st.write("The predicted ESG scores for the next 3 days are:")
+                st.write("The predicted ESG scores for the next days are:")
                 st.write(prediction_df)
 
             elif section == "Optimization Tips":
