@@ -44,7 +44,6 @@ def forecast_next_days(model, avg_data, num_days=3):
 # Streamlit app setup
 st.set_page_config(layout="wide")
 st.title("ESG Score Prediction by ESGLOBAL - Global Hackathon 2025")
-st.set_page_config(page_title="ESG Prediction - Team 5")
 # Login/Signup functionality
 def login_page():
     """Handle user login/signup."""
