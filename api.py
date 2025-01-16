@@ -134,6 +134,23 @@ else:
                         (input_data['Date'] <= pd.to_datetime(end_date))
                     ]
 
+                    # Select granularity for the data
+                    granularity = st.radio(
+                        "Select data granularity for visualization",
+                        ("Daily", "Monthly", "Yearly")
+                    )
+
+                    # Ensure only numeric columns are aggregated
+                    numeric_columns = filtered_data.select_dtypes(include=['number']).columns
+                    filtered_data = filtered_data.set_index('Date')
+
+                    if granularity == "Daily":
+                        aggregated_data = filtered_data.reset_index()
+                    elif granularity == "Monthly":
+                        aggregated_data = filtered_data[numeric_columns].resample('M').mean().reset_index()
+                    elif granularity == "Yearly":
+                        aggregated_data = filtered_data[numeric_columns].resample('Y').mean().reset_index()
+
                     # Chart type selection
                     chart_type = st.radio(
                         "Select chart type",
@@ -141,7 +158,7 @@ else:
                     )
 
                     if chart_type == "Line Chart":
-                        historical_data = filtered_data[['Date', 'ESG_Score']]
+                        historical_data = aggregated_data[['Date', 'ESG_Score']]
                         combined_data = pd.concat([
                             historical_data,
                             pd.DataFrame({'Date': future_dates, 'ESG_Score': future_predictions})
@@ -149,7 +166,7 @@ else:
 
                         plt.figure(figsize=(10, 6))
                         sns.lineplot(data=combined_data, x='Date', y='ESG_Score', marker='o')
-                        plt.title("ESG Scores: Historical and Predicted")
+                        plt.title(f"ESG Scores: Historical and Predicted ({granularity} Data)")
                         plt.xticks(rotation=45)
                         st.pyplot()
 
@@ -159,10 +176,10 @@ else:
 
                         # Plot using three features
                         ax.scatter(
-                            filtered_data['Carbon_Emissions'],
-                            filtered_data['Governance_Score'],
-                            filtered_data['Social_Score'],
-                            c=filtered_data['Environmental_Score'],
+                            aggregated_data['Carbon_Emissions'],
+                            aggregated_data['Governance_Score'],
+                            aggregated_data['Social_Score'],
+                            c=aggregated_data['Environmental_Score'],
                             cmap='viridis',
                             s=50
                         )
@@ -170,9 +187,10 @@ else:
                         ax.set_xlabel("Carbon Emissions")
                         ax.set_ylabel("Governance Score")
                         ax.set_zlabel("Social Score")
-                        ax.set_title("3D Scatter Plot of Features")
+                        ax.set_title(f"3D Scatter Plot of Features ({granularity} Data)")
 
                         st.pyplot(fig)
+
 
                 elif section == "Conclusions":
                     st.subheader("Conclusions")
